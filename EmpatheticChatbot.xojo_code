@@ -2,22 +2,34 @@
 Protected Class EmpatheticChatbot
 	#tag Method, Flags = &h21
 		Private Sub AddToHistory(entry As String)
-		  // Add to history
-		  mConversationHistory.Add(DateTime.Now.ToString + ": " + entry)
+		  // Add to history with timestamp
+		  mConversationHistory.Append(DateTime.Now.ToString + ": " + entry)
+		  
+		  // Keep track of recent exchanges for context
+		  mRecentExchanges.Append(entry)
+		  If mRecentExchanges.Ubound > 10 Then
+		    mRecentExchanges.Remove(0)
+		  End If
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub ClearHistory()
-		  mConversationHistory.RemoveAll
+		  Redim mConversationHistory(-1)
 		  mEmotionalPatterns.RemoveAll
-		  mMirroredPhrases.RemoveAll
+		  mKeyTopics.RemoveAll
+		  mSpecificSituations.RemoveAll
+		  Redim mRecentExchanges(-1)
+		  mRecentResponses.RemoveAll
 		  mSessionStartTime = DateTime.Now
-		  mQuestionCount = 0
-		  mReflectionCount = 0
-		  mLabelingCount = 0
+		  mTurnCount = 0
 		  mLastEmotion = ""
 		  mEmotionalIntensity = 0
+		  mConversationPhase = "opening"
+		  mUserSharedDetails.RemoveAll
+		  mLastResponseType = ""
+		  mCurrentSituation = ""
+		  mLastUserInput = ""
 		  AddToHistory("New session started at " + mSessionStartTime.ToString)
 		End Sub
 	#tag EndMethod
@@ -25,323 +37,353 @@ Protected Class EmpatheticChatbot
 	#tag Method, Flags = &h0
 		Sub Constructor()
 		  mSessionStartTime = DateTime.Now
-		  var mConversationHistory() as String
+		  Redim mConversationHistory(-1)
 		  mEmotionalPatterns = New Dictionary
-		  mMirroredPhrases = New Dictionary
-		  mQuestionCount = 0
-		  mReflectionCount = 0
-		  mLabelingCount = 0
+		  mKeyTopics = New Dictionary
+		  mSpecificSituations = New Dictionary
+		  mRecentResponses = New Dictionary
+		  Redim mRecentExchanges(-1)
+		  mUserSharedDetails = New Dictionary
+		  mTurnCount = 0
 		  mLastEmotion = ""
 		  mEmotionalIntensity = 0
+		  mConversationPhase = "opening"
+		  mLastResponseType = ""
+		  mCurrentSituation = ""
+		  mLastUserInput = ""
 		  
 		  AddToHistory("Session started at " + mSessionStartTime.ToString)
 		End Sub
 	#tag EndMethod
 
-	#tag Method, Flags = &h21
-		Private Function CreateCalibrationQuestion(userInput As String) As String
-		  ' Questions that help calibrate emotional state and create illusion of control
-		  
-		  Var lowerInput As String = userInput.Lowercase
-		  
-		  ' Calibrated questions based on emotional intensity
-		  If mEmotionalIntensity > 7 Then
-		    Var highIntensityQuestions() As String = Array( _
-		    "On a scale of 1 to 10, how overwhelming does this feel right now?", _
-		    "What would need to happen for you to feel even slightly better about this?", _
-		    "Is this the worst part, or is there something else underneath this?", _
-		    "What's the one thing that would make the biggest difference right now?" _
-		    )
-		    Return highIntensityQuestions(System.Random.InRange(0, highIntensityQuestions.Count - 1))
-		  ElseIf mEmotionalIntensity > 4 Then
-		    Var mediumIntensityQuestions() As String = Array( _
-		    "How long have you been carrying this feeling?", _
-		    "What would moving forward look like for you?", _
-		    "Is this something you've dealt with before, or does it feel completely new?", _
-		    "What part of this feels most within your control?" _
-		    )
-		    Return mediumIntensityQuestions(System.Random.InRange(0, mediumIntensityQuestions.Count - 1))
-		  Else
-		    Var lowIntensityQuestions() As String = Array( _
-		    "What's your sense of what comes next?", _
-		    "How are you thinking about approaching this?", _
-		    "What options are you considering?", _
-		    "What feels most important to focus on?" _
-		    )
-		    Return lowIntensityQuestions(System.Random.InRange(0, lowIntensityQuestions.Count - 1))
-		  End If
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function CreateEmotionalLabel(emotion As String, intensity As Integer) As String
-		  ' Label emotions using "It seems like..." or "It sounds like..." format
-		  
-		  Var labelStarters() As String = Array( _
-		  "It seems like", "It sounds like", "It feels like", "It looks like", _
-		  "You seem to be feeling", "There's a sense that" _
-		  )
-		  
-		  Var starter As String = labelStarters(System.Random.InRange(0, labelStarters.Count - 1))
-		  
-		  ' Adjust language based on intensity
-		  If intensity > 7 Then
-		    Return starter + " you're really " + emotion + " about this."
-		  ElseIf intensity > 4 Then
-		    Return starter + " you're " + emotion + " about this situation."
-		  Else
-		    Return starter + " there's some " + emotion + " here for you."
-		  End If
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function CreateIllusionOfControl(userInput As String) As String
-		  ' Create sense of control through choice and agency
-		  
-		  Var controlPhrases() As String = Array( _
-		  "What would you like to focus on - the immediate situation or the bigger picture?", _
-		  "Would it help more to talk through what happened, or explore what you're feeling about it?", _
-		  "Do you want to dig deeper into this, or would you prefer to step back and look at options?", _
-		  "What feels more important right now - understanding why this happened or figuring out what to do next?", _
-		  "Would you rather explore what this means to you, or talk about how you want to handle it?", _
-		  "What would be most helpful - looking at this from different angles or focusing on one specific part?" _
-		  )
-		  
-		  Return controlPhrases(System.Random.InRange(0, controlPhrases.Count - 1))
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function CreateMirror(userInput As String) As String
-		  ' Mirror the last 1-3 words with upward inflection
-		  
-		  Var words() As String = userInput.Trim.Split(" ")
-		  If words.Count = 0 Then Return ""
-		  
-		  Var mirrorLength As Integer = System.Random.InRange(1, 3)
-		  If words.Count < mirrorLength Then mirrorLength = words.Count
-		  
-		  Var mirror As String = ""
-		  For i As Integer = words.Count - mirrorLength To words.Count - 1
-		    mirror = mirror + words(i) + " "
-		  Next
-		  
-		  mirror = mirror.Trim + "?"
-		  
-		  ' Store mirrored phrase for tracking
-		  If Not mMirroredPhrases.HasKey(mirror.Lowercase) Then
-		    mMirroredPhrases.Value(mirror.Lowercase) = 1
-		  Else
-		    mMirroredPhrases.Value(mirror.Lowercase) = mMirroredPhrases.Value(mirror.Lowercase) + 1
-		  End If
-		  
-		  Return mirror
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function CreateTacticalEmpathy(userInput As String, emotion As String) As String
-		  ' Acknowledge their perspective and validate their experience
-		  
-		  Var lowerInput As String = userInput.Lowercase
-		  
-		  ' Specific empathetic responses based on content
-		  If InStr(lowerInput, "unfair") > 0 Or InStr(lowerInput, "not fair") > 0 Then
-		    Return "That really doesn't seem fair to you, does it? Anyone in your position would feel that way."
-		  ElseIf InStr(lowerInput, "nobody understands") > 0 Or InStr(lowerInput, "no one gets it") > 0 Then
-		    Return "It must be incredibly isolating to feel like no one really gets what you're going through."
-		  ElseIf InStr(lowerInput, "can't take it") > 0 Or InStr(lowerInput, "too much") > 0 Then
-		    Return "This sounds absolutely overwhelming. You're dealing with way more than anyone should have to handle alone."
-		  ElseIf InStr(lowerInput, "scared") > 0 Or InStr(lowerInput, "afraid") > 0 Then
-		    Return "Fear is such a difficult emotion to sit with, especially when it feels this big."
-		  ElseIf InStr(lowerInput, "angry") > 0 Or InStr(lowerInput, "mad") > 0 Then
-		    Return "That anger makes complete sense. You have every right to feel this way about what happened."
-		  ElseIf InStr(lowerInput, "disappointed") > 0 Then
-		    Return "Disappointment can be one of the hardest emotions to process, especially when your hopes were high."
-		  ElseIf InStr(lowerInput, "confused") > 0 Then
-		    Return "Confusion is so uncomfortable, isn't it? Not knowing what to think or feel about something this important."
-		  End If
-		  
-		  ' General tactical empathy responses
-		  Var empathyResponses() As String = Array( _
-		  "This is clearly weighing heavily on you, and that's completely understandable.", _
-		  "Anyone going through what you're experiencing would be struggling with this.", _
-		  "It sounds like you're being really hard on yourself about something that's genuinely difficult.", _
-		  "What you're dealing with would challenge anyone. You're not alone in feeling this way.", _
-		  "This situation would be tough for anyone to navigate. Your feelings make perfect sense." _
-		  )
-		  
-		  Return empathyResponses(System.Random.InRange(0, empathyResponses.Count - 1))
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function DetectEmotion(input As String) As String
-		  ' Enhanced emotion detection
-		  
-		  Var lowerInput As String = input.Lowercase
-		  
-		  ' Direct emotion words
-		  If InStr(lowerInput, "furious") > 0 Or InStr(lowerInput, "enraged") > 0 Then
-		    mEmotionalIntensity = 9
-		    Return "furious"
-		  ElseIf InStr(lowerInput, "devastated") > 0 Or InStr(lowerInput, "destroyed") > 0 Then
-		    mEmotionalIntensity = 9
-		    Return "devastated"
-		  ElseIf InStr(lowerInput, "terrified") > 0 Or InStr(lowerInput, "petrified") > 0 Then
-		    mEmotionalIntensity = 9
-		    Return "terrified"
-		  ElseIf InStr(lowerInput, "angry") > 0 Or InStr(lowerInput, "mad") > 0 Or InStr(lowerInput, "pissed") > 0 Then
-		    mEmotionalIntensity = 7
-		    Return "angry"
-		  ElseIf InStr(lowerInput, "sad") > 0 Or InStr(lowerInput, "depressed") > 0 Then
-		    mEmotionalIntensity = 6
-		    Return "sad"
-		  ElseIf InStr(lowerInput, "scared") > 0 Or InStr(lowerInput, "afraid") > 0 Or InStr(lowerInput, "worried") > 0 Then
-		    mEmotionalIntensity = 6
-		    Return "scared"
-		  ElseIf InStr(lowerInput, "frustrated") > 0 Or InStr(lowerInput, "annoyed") > 0 Then
-		    mEmotionalIntensity = 5
-		    Return "frustrated"
-		  ElseIf InStr(lowerInput, "disappointed") > 0 Then
-		    mEmotionalIntensity = 5
-		    Return "disappointed"
-		  ElseIf InStr(lowerInput, "confused") > 0 Or InStr(lowerInput, "lost") > 0 Then
-		    mEmotionalIntensity = 4
-		    Return "confused"
-		  ElseIf InStr(lowerInput, "overwhelmed") > 0 Or InStr(lowerInput, "stressed") > 0 Then
-		    mEmotionalIntensity = 7
-		    Return "overwhelmed"
-		  End If
-		  
-		  ' Contextual emotion detection
-		  If InStr(lowerInput, "can't take") > 0 Or InStr(lowerInput, "too much") > 0 Then
-		    mEmotionalIntensity = 8
-		    Return "overwhelmed"
-		  ElseIf InStr(lowerInput, "giving up") > 0 Or InStr(lowerInput, "hopeless") > 0 Then
-		    mEmotionalIntensity = 8
-		    Return "hopeless"
-		  ElseIf InStr(lowerInput, "don't know what to do") > 0 Then
-		    mEmotionalIntensity = 6
-		    Return "lost"
-		  End If
-		  
-		  mEmotionalIntensity = 3
-		  Return "uncertainty"
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function DetermineResponseType() As String
-		  ' Determine which technique to use based on conversation flow
-		  
-		  Var totalResponses As Integer = mQuestionCount + mReflectionCount + mLabelingCount
-		  
-		  ' Start with labeling for new conversations
-		  If totalResponses < 2 And mEmotionalIntensity > 3 Then
-		    Return "label"
-		  End If
-		  
-		  ' Use mirroring frequently but not consecutively
-		  If mLastResponse.EndsWith("?") = False And System.Random.InRange(1, 100) <= 25 Then
-		    Return "mirror"
-		  End If
-		  
-		  ' Balance tactical empathy with other techniques
-		  If mReflectionCount >= 2 And mQuestionCount = 0 Then
-		    If System.Random.InRange(1, 100) <= 60 Then
-		      Return "calibration"
-		    Else
-		      Return "control"
-		    End If
-		  End If
-		  
-		  ' Use tactical empathy for high emotion
-		  If mEmotionalIntensity > 6 And mReflectionCount < 3 Then
-		    Return "tactical_empathy"
-		  End If
-		  
-		  ' Create illusion of control when they seem stuck
-		  If mQuestionCount >= 3 And System.Random.InRange(1, 100) <= 40 Then
-		    Return "control"
-		  End If
-		  
-		  ' Use calibration questions to gather information
-		  If mQuestionCount < mReflectionCount And System.Random.InRange(1, 100) <= 50 Then
-		    Return "calibration"
-		  End If
-		  
-		  ' Default to emotional labeling
-		  If System.Random.InRange(1, 100) <= 60 Then
-		    Return "label"
-		  Else
-		    Return "minimal"
-		  End If
-		End Function
-	#tag EndMethod
-
 	#tag Method, Flags = &h0
 		Function GenerateResponse(userInput As String) As String
 		  AddToHistory("User: " + userInput)
+		  mTurnCount = mTurnCount + 1
 		  
-		  ' Detect emotion and intensity
+		  // Check for boundaries first
+		  Var boundaryResponse As String = ValidateUserBoundary(userInput)
+		  If boundaryResponse <> "" Then
+		    AddToHistory("Bot: " + boundaryResponse)
+		    Return boundaryResponse
+		  End If
+		  
+		  // Store last user input for context
+		  mLastUserInput = userInput.Lowercase
+		  
+		  // Update conversation phase
+		  mConversationPhase = DetermineConversationPhase()
+		  
+		  // Detect emotion and situation
 		  Var currentEmotion As String = DetectEmotion(userInput)
-		  mLastEmotion = currentEmotion
+		  Var specificSituation As String = AnalyzeSpecificSituation(userInput)
 		  
-		  ' Track emotional patterns
-		  If Not mEmotionalPatterns.HasKey(currentEmotion) Then
-		    mEmotionalPatterns.Value(currentEmotion) = 1
-		  Else
-		    mEmotionalPatterns.Value(currentEmotion) = mEmotionalPatterns.Value(currentEmotion) + 1
-		  End If
+		  // Track emotional patterns
+		  TrackEmotionalPattern(currentEmotion)
 		  
-		  Var response As String = ""
-		  Var responseType As String = DetermineResponseType()
+		  // Generate contextual response - this is the main logic
+		  Var response As String = CreateSmartResponse(userInput, currentEmotion, specificSituation)
 		  
-		  Select Case responseType
-		  Case "mirror"
-		    response = CreateMirror(userInput)
-		    
-		  Case "label"
-		    response = CreateEmotionalLabel(currentEmotion, mEmotionalIntensity)
-		    mLabelingCount = mLabelingCount + 1
-		    
-		  Case "tactical_empathy"
-		    response = CreateTacticalEmpathy(userInput, currentEmotion)
-		    mReflectionCount = mReflectionCount + 1
-		    
-		  Case "calibration"
-		    response = CreateCalibrationQuestion(userInput)
-		    mQuestionCount = mQuestionCount + 1
-		    
-		  Case "control"
-		    response = CreateIllusionOfControl(userInput)
-		    mQuestionCount = mQuestionCount + 1
-		    
-		  Case "minimal"
-		    ' Minimal encouragers to keep them talking
-		    Var minimal() As String = Array("Mm-hmm.", "Go on.", "I'm listening.", "Tell me more.", "And then?", "That must have been hard.")
-		    response = minimal(System.Random.InRange(0, minimal.Count - 1))
-		    
-		  End Select
+		  // Ensure we don't repeat responses
+		  response = EnsureUniqueResponse(response, userInput)
 		  
-		  ' Add a pause or follow-up about 30% of the time
-		  If System.Random.InRange(1, 100) <= 30 And response.Length > 5 Then
-		    Var followUps() As String = Array( _
-		    " What else?", _
-		    " Help me understand.", _
-		    " There's more, isn't there?", _
-		    " What am I missing?", _
-		    " Say more about that." _
-		    )
-		    response = response + followUps(System.Random.InRange(0, followUps.Count - 1))
-		  End If
+		  // Track this response to prevent future repetition
+		  TrackResponse(response)
 		  
 		  mLastResponse = response
 		  AddToHistory("Bot: " + response)
 		  
 		  Return response
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateSmartResponse(userInput As String, emotion As String, specificSituation As String) As String
+		  Var lowerInput As String = userInput.Lowercase
+		  Var response As String = ""
+		  
+		  // Handle very specific situations first
+		  If InStr(lowerInput, "medical test") > 0 Or InStr(lowerInput, "blood test") > 0 Then
+		    mCurrentSituation = "waiting_for_medical_results"
+		    Return "Medical tests can create such anxiety while we wait. The uncertainty is really hard to sit with. What kind of tests are you waiting for results on?"
+		  End If
+		  
+		  If InStr(lowerInput, "doctor") > 0 And (InStr(lowerInput, "didn't call") > 0 Or InStr(lowerInput, "haven't seen") > 0) Then
+		    Return "That silence from your doctor must feel really unsettling. When did you have the tests done? Sometimes the waiting feels endless when it's about our health."
+		  End If
+		  
+		  If InStr(lowerInput, "can't sleep") > 0 Then
+		    If mCurrentSituation = "waiting_for_medical_results" Then
+		      Return "The worry about your test results is keeping you awake - your mind won't quiet down, will it? What thoughts are cycling through when you're lying there?"
+		    Else
+		      Return "Sleep troubles often signal that our minds are wrestling with something. What's keeping your thoughts spinning at night?"
+		    End If
+		  End If
+		  
+		  If InStr(lowerInput, "haven't seen them") > 0 And mCurrentSituation = "waiting_for_medical_results" Then
+		    Return "Not seeing your results yet... that waiting period can feel like torture. How long has it been since the tests? Are you imagining different scenarios about what they might show?"
+		  End If
+		  
+		  // Handle brief responses that need follow-up
+		  If userInput.Length < 30 Then
+		    If lowerInput = "yes" Or lowerInput = "yeah" Or lowerInput = "exactly" Then
+		      Return "Tell me more about that. What's the hardest part of this situation for you?"
+		    ElseIf InStr(lowerInput, "worried") > 0 Or InStr(lowerInput, "scared") > 0 Then
+		      Return "That worry is really weighing on you. What specifically are you most concerned about?"
+		    ElseIf InStr(lowerInput, "don't know") > 0 Then
+		      Return "Not knowing can be the most difficult part. What would help you feel even slightly more settled while you wait?"
+		    End If
+		  End If
+		  
+		  // Phase-based responses with context
+		  Select Case mConversationPhase
+		  Case "opening"
+		    If emotion = "worried" Or emotion = "scared" Then
+		      response = "I can hear the " + emotion + " in what you're sharing. " + GetContextualValidation(emotion, specificSituation)
+		    Else
+		      response = "Thank you for sharing this with me. " + GetOpeningQuestion(specificSituation)
+		    End If
+		    
+		  Case "exploration"
+		    response = GetExplorationResponse(userInput, emotion, specificSituation)
+		    
+		  Case "deepening"
+		    response = GetDeepeningResponse(userInput, emotion, specificSituation)
+		    
+		  Case "supporting"
+		    response = GetSupportingResponse(userInput, emotion, specificSituation)
+		    
+		  End Select
+		  
+		  Return response
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function GetContextualValidation(emotion As String, situation As String) As String
+		  Select Case emotion
+		  Case "worried", "scared"
+		    If situation = "waiting_for_medical_results" Then
+		      Return "Health concerns touch on our deepest fears about the unknown. That anxiety makes complete sense."
+		    Else
+		      Return "Worry has a way of taking over our thoughts. What you're feeling is completely understandable."
+		    End If
+		  Case "frustrated"
+		    Return "That frustration tells me something important isn't happening the way it should. You have every right to feel that way."
+		  Case "sad"
+		    Return "There's real pain in what you're carrying. That sadness deserves space to be felt."
+		  Else
+		    Return "What you're experiencing sounds really challenging."
+		  End Select
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function GetOpeningQuestion(situation As String) As String
+		  Select Case situation
+		  Case "waiting_for_medical_results"
+		    Return "What's been going through your mind while you wait?"
+		  Case "communication_issues"
+		    Return "Help me understand what's happening with this communication breakdown."
+		  Else
+		    Return "What brought you here to talk today?"
+		  End Select
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function GetExplorationResponse(userInput As String, emotion As String, situation As String) As String
+		  Var lowerInput As String = userInput.Lowercase
+		  
+		  // Build on what they just shared
+		  If InStr(lowerInput, "results") > 0 Then
+		    Return "The wait for results can feel endless. What's your mind telling you might be wrong? Are you preparing for the worst or trying to stay hopeful?"
+		  ElseIf InStr(lowerInput, "doctor") > 0 Then
+		    Return "When doctors don't communicate, we're left filling in those blanks ourselves. What story is your mind creating about their silence?"
+		  Else
+		    Select Case emotion
+		    Case "worried"
+		      Return "This worry seems to be taking up a lot of space in your mind. What would you need to know or hear to feel even a little more at peace?"
+		    Case "frustrated"
+		      Return "That frustration is building up. What would need to change for you to feel more in control of this situation?"
+		    Else
+		      Return "What aspect of this feels most overwhelming right now?"
+		    End Select
+		  End If
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function GetDeepeningResponse(userInput As String, emotion As String, situation As String) As String
+		  If situation = "waiting_for_medical_results" Then
+		    Return "This waiting... it's like being suspended between your current life and whatever might come next. How are you coping with that uncertainty day by day?"
+		  ElseIf emotion = "worried" And mEmotionalIntensity > 6 Then
+		    Return "This level of worry can be exhausting. It sounds like your mind won't give you a break from these thoughts. What helps, even for a few minutes?"
+		  Else
+		    Return "There are layers to what you're experiencing. Which part feels most urgent to address right now?"
+		  End If
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function GetSupportingResponse(userInput As String, emotion As String, situation As String) As String
+		  Var lowerInput As String = userInput.Lowercase
+		  
+		  If InStr(lowerInput, "what can i do") > 0 Then
+		    If situation = "waiting_for_medical_results" Then
+		      Return "It's completely reasonable to call the doctor's office and ask about when results typically come back. You have a right to information about your own health."
+		    Else
+		      Return "The fact that you're asking that question shows you haven't given up. What's one small step that feels manageable today?"
+		    End If
+		  Else
+		    If situation = "waiting_for_medical_results" Then
+		      Return "This health uncertainty is draining. While you wait, what helps you stay grounded? Sometimes we need survival strategies for these in-between times."
+		    Else
+		      Return "You're handling something really difficult. What support do you have around you during this?"
+		    End If
+		  End If
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function EnsureUniqueResponse(proposedResponse As String, userInput As String) As String
+		  // Check if we've used this response recently
+		  If mRecentResponses.HasKey(proposedResponse) Then
+		    // Generate an alternative response
+		    Var lowerInput As String = userInput.Lowercase
+		    
+		    If InStr(lowerInput, "can't sleep") > 0 Then
+		      Return "The sleeplessness must be making everything feel harder to handle. What goes through your mind during those wakeful hours?"
+		    ElseIf InStr(lowerInput, "medical") > 0 Or InStr(lowerInput, "test") > 0 Then
+		      Return "Waiting for medical news puts us in such a vulnerable place. How are you taking care of yourself while you wait?"
+		    ElseIf InStr(lowerInput, "doctor") > 0 Then
+		      Return "That lack of communication from your healthcare provider would frustrate anyone. Have you been able to reach out to their office?"
+		    Else
+		      // Generic alternatives that acknowledge what they said
+		      Var alternatives() As String = Array( _
+		      "I hear you. Can you help me understand more about what this feels like?", _
+		      "That sounds really difficult. What's the most challenging part of this for you?", _
+		      "Thank you for sharing that with me. What would feel helpful right now?" _
+		      )
+		      Return alternatives(System.Random.InRange(0, alternatives.Ubound))
+		    End If
+		  End If
+		  
+		  Return proposedResponse
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Sub TrackResponse(response As String)
+		  // Store response with timestamp to avoid immediate repetition
+		  mRecentResponses.Value(response) = Str(DateTime.Now.SecondsFrom1970)
+		  
+		  // Clean out old responses (older than 10 minutes)
+		  Var keysToRemove() As String
+		  For Each key As String In mRecentResponses.Keys
+		    If (DateTime.Now.SecondsFrom1970 - Val(mRecentResponses.Value(key))) > 600 Then
+		      keysToRemove.Append(key)
+		    End If
+		  Next
+		  
+		  For Each key As String In keysToRemove
+		    mRecentResponses.Remove(key)
+		  Next
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function AnalyzeSpecificSituation(userInput As String) As String
+		  Var lowerInput As String = userInput.Lowercase
+		  
+		  // Medical situations
+		  If InStr(lowerInput, "medical test") > 0 Or InStr(lowerInput, "blood test") > 0 Or _
+		     InStr(lowerInput, "test results") > 0 Then
+		    Return "waiting_for_medical_results"
+		  End If
+		  
+		  If InStr(lowerInput, "doctor") > 0 And (InStr(lowerInput, "didn't call") > 0 Or _
+		     InStr(lowerInput, "haven't heard") > 0) Then
+		    Return "doctor_communication_delay"
+		  End If
+		  
+		  // Communication issues
+		  If InStr(lowerInput, "doesn't listen") > 0 Or InStr(lowerInput, "won't listen") > 0 Then
+		    Return "communication_issues"
+		  End If
+		  
+		  Return ""
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function DetectEmotion(input As String) As String
+		  Var lowerInput As String = input.Lowercase
+		  mEmotionalIntensity = 5 // Default
+		  
+		  If InStr(lowerInput, "concerned") > 0 Or InStr(lowerInput, "worried") > 0 Then
+		    mEmotionalIntensity = 6
+		    Return "worried"
+		  ElseIf InStr(lowerInput, "can't sleep") > 0 Then
+		    mEmotionalIntensity = 7
+		    Return "anxious"
+		  ElseIf InStr(lowerInput, "scared") > 0 Or InStr(lowerInput, "afraid") > 0 Then
+		    mEmotionalIntensity = 7
+		    Return "scared"
+		  ElseIf InStr(lowerInput, "frustrated") > 0 Then
+		    mEmotionalIntensity = 6
+		    Return "frustrated"
+		  ElseIf InStr(lowerInput, "haven't seen") > 0 And InStr(lowerInput, "results") > 0 Then
+		    mEmotionalIntensity = 6
+		    Return "worried"
+		  End If
+		  
+		  Return "uncertain"
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Sub TrackEmotionalPattern(emotion As String)
+		  If emotion = "" Then Return
+		  
+		  If Not mEmotionalPatterns.HasKey(emotion) Then
+		    mEmotionalPatterns.Value(emotion) = "1"
+		  Else
+		    Var count As Integer = Val(mEmotionalPatterns.Value(emotion))
+		    mEmotionalPatterns.Value(emotion) = Str(count + 1)
+		  End If
+		  
+		  mLastEmotion = emotion
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function DetermineConversationPhase() As String
+		  If mTurnCount <= 2 Then
+		    Return "opening"
+		  ElseIf mTurnCount <= 4 Then
+		    Return "exploration"
+		  ElseIf mTurnCount <= 8 Then
+		    Return "deepening"
+		  Else
+		    Return "supporting"
+		  End If
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function ValidateUserBoundary(input As String) As String
+		  Var lowerInput As String = input.Lowercase
+		  
+		  If InStr(lowerInput, "stop talking") > 0 Or InStr(lowerInput, "stop asking") > 0 Then
+		    Return "I understand. I'll give you space. I'm here if you need me."
+		  ElseIf InStr(lowerInput, "don't want to talk") > 0 Then
+		    Return "That's completely okay. You don't have to talk about anything you're not ready to share."
+		  ElseIf lowerInput = "stop" Or lowerInput = "enough" Then
+		    Return "Okay. I'm here when you're ready."
+		  End If
+		  
+		  Return ""
 		End Function
 	#tag EndMethod
 
@@ -357,12 +399,14 @@ Protected Class EmpatheticChatbot
 		  
 		  Var profile As String = "Emotional patterns detected:" + EndOfLine
 		  For Each emotion As String In mEmotionalPatterns.Keys
-		    Var count As Integer = mEmotionalPatterns.Value(emotion)
+		    Var count As Integer = Val(mEmotionalPatterns.Value(emotion))
 		    profile = profile + "- " + emotion + " (detected " + Str(count) + " times)" + EndOfLine
 		  Next
 		  
 		  profile = profile + EndOfLine + "Current emotional intensity: " + Str(mEmotionalIntensity) + "/10" + EndOfLine
 		  profile = profile + "Most recent emotion: " + mLastEmotion + EndOfLine
+		  profile = profile + "Conversation phase: " + mConversationPhase + EndOfLine
+		  profile = profile + "Current situation: " + mCurrentSituation + EndOfLine
 		  
 		  Return profile
 		End Function
@@ -373,11 +417,11 @@ Protected Class EmpatheticChatbot
 		  Var summary As String = "Session Summary:" + EndOfLine
 		  summary = summary + "Started: " + mSessionStartTime.ToString + EndOfLine
 		  summary = summary + "Duration: " + Str((DateTime.Now.SecondsFrom1970 - mSessionStartTime.SecondsFrom1970) / 60) + " minutes" + EndOfLine
-		  summary = summary + "Exchanges: " + Str(mConversationHistory.Count) + EndOfLine
-		  summary = summary + "Calibration questions: " + Str(mQuestionCount) + EndOfLine
-		  summary = summary + "Empathetic reflections: " + Str(mReflectionCount) + EndOfLine
-		  summary = summary + "Emotional labels: " + Str(mLabelingCount) + EndOfLine
+		  summary = summary + "Exchanges: " + Str(mTurnCount) + EndOfLine
 		  summary = summary + "Peak emotional intensity: " + Str(mEmotionalIntensity) + "/10" + EndOfLine
+		  summary = summary + "Current phase: " + mConversationPhase + EndOfLine
+		  summary = summary + "Situation identified: " + mCurrentSituation + EndOfLine
+		  
 		  Return summary
 		End Function
 	#tag EndMethod
@@ -390,27 +434,21 @@ Protected Class EmpatheticChatbot
 
 	#tag Method, Flags = &h0
 		Sub ResizeTerminal(cols As Integer, rows As Integer)
-		  
-		  // Use ANSI escape sequence to resize terminal window
-		  System.DebugLog Chr(27) + "[8;" + Str(rows) + ";" + Str(cols) + "t"
-		  
+		  stdout.Write(Chr(27) + "[8;" + Str(rows) + ";" + Str(cols) + "t")
+		  stdout.Flush
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub setScreenColours()
+		Sub SetScreenColours()
+		  Var kLightBlue As String = Chr(27) + "[104m"
+		  Var kCyan As String = Chr(27) + "[106m"
+		  Var kClearScreen As String = Chr(27) + "[2J"
+		  Var kHomeCursor As String = Chr(27) + "[H"
+		  Var kWhiteText As String = Chr(27) + "[97m"
 		  
-		  
-		  var  kLightBlue As String = Chr(27) + "[104m"  // Bright blue background
-		  var kCyan As String = Chr(27) + "[106m"       // Cyan background (light blue-ish)
-		  var kClearScreen As String = Chr(27) + "[2J"  // Clear screen
-		  var kHomeCursor As String = Chr(27) + "[H"    // Move cursor to home (0,0)
-		  var kWhiteText As String = Chr(27) + "[97m"   // Bright white text
-		  
-		  // Set up the entire screen with light blue background
-		  System.DebugLog kLightBlue + kClearScreen + kHomeCursor + kWhiteText
-		  
-		  
+		  stdout.Write(kLightBlue + kClearScreen + kHomeCursor + kWhiteText)
+		  stdout.Flush
 		End Sub
 	#tag EndMethod
 
@@ -420,103 +458,73 @@ Protected Class EmpatheticChatbot
 		End Sub
 	#tag EndMethod
 
-	#tag Method, Flags = &h0
-		Function ValidateUserBoundary(input As String) As String
-		  Var lowerInput As String = input.Lowercase
-		  If InStr(lowerInput, "no") > 0 Or InStr(lowerInput, "don't want") > 0 Or InStr(lowerInput, "stop") > 0 Then
-		    Return "I hear you saying no, and I completely respect that. You're in control here. What would feel right for you instead?"
-		  End If
-		  Return ""
-		End Function
-	#tag EndMethod
-
-
 	#tag Property, Flags = &h21
-		Private mConversationHistory() As String
+	Private mConversationHistory() As String
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mEmotionalIntensity As Integer
+	Private mRecentExchanges() As String
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mEmotionalPatterns As Dictionary
+	Private mEmotionalPatterns As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mLabelingCount As Integer
+	Private mKeyTopics As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mLastEmotion As String
+	Private mSpecificSituations As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mLastResponse As String
+	Private mRecentResponses As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mMirroredPhrases As Dictionary
+	Private mUserSharedDetails As Dictionary
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mQuestionCount As Integer
+	Private mSessionStartTime As DateTime
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mReflectionCount As Integer
+	Private mTurnCount As Integer
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mSessionStartTime As DateTime
+	Private mLastEmotion As String
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
-		Private mUserName As String
+	Private mEmotionalIntensity As Integer
 	#tag EndProperty
 
+	#tag Property, Flags = &h21
+	Private mConversationPhase As String
+	#tag EndProperty
 
-	#tag ViewBehavior
-		#tag ViewProperty
-			Name="Name"
-			Visible=true
-			Group="ID"
-			InitialValue=""
-			Type="String"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Index"
-			Visible=true
-			Group="ID"
-			InitialValue="-2147483648"
-			Type="Integer"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Super"
-			Visible=true
-			Group="ID"
-			InitialValue=""
-			Type="String"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Left"
-			Visible=true
-			Group="Position"
-			InitialValue="0"
-			Type="Integer"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="Top"
-			Visible=true
-			Group="Position"
-			InitialValue="0"
-			Type="Integer"
-			EditorType=""
-		#tag EndViewProperty
-	#tag EndViewBehavior
+	#tag Property, Flags = &h21
+	Private mLastResponseType As String
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+	Private mLastResponse As String
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+	Private mCurrentSituation As String
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+	Private mLastUserInput As String
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+	Private mUserName As String
+	#tag EndProperty
+
 End Class
 #tag EndClass

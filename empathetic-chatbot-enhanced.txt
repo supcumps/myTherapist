@@ -1,0 +1,750 @@
+#tag Class
+Protected Class EmpatheticChatbot
+	#tag Method, Flags = &h21
+		Private Sub AddToHistory(entry As String)
+		  // Add to history with timestamp
+		  mConversationHistory.Append(DateTime.Now.ToString + ": " + entry)
+		  
+		  // Keep track of recent exchanges for context
+		  mRecentExchanges.Append(entry)
+		  If mRecentExchanges.Ubound > 5 Then
+		    mRecentExchanges.Remove(0)
+		  End If
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub ClearHistory()
+		  Redim mConversationHistory(-1)
+		  mEmotionalPatterns.RemoveAll
+		  mKeyTopics.RemoveAll
+		  Redim mRecentExchanges(-1)
+		  mSessionStartTime = DateTime.Now
+		  mTurnCount = 0
+		  mLastEmotion = ""
+		  mEmotionalIntensity = 0
+		  mConversationPhase = "opening"
+		  mUserSharedDetails.RemoveAll
+		  mResponsesUsed.RemoveAll
+		  mLastResponseType = ""
+		  AddToHistory("New session started at " + mSessionStartTime.ToString)
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub Constructor()
+		  mSessionStartTime = DateTime.Now
+		  Redim mConversationHistory(-1)
+		  mEmotionalPatterns = New Dictionary
+		  mKeyTopics = New Dictionary
+		  Redim mRecentExchanges(-1)
+		  mUserSharedDetails = New Dictionary
+		  mResponsesUsed = New Dictionary
+		  mTurnCount = 0
+		  mLastEmotion = ""
+		  mEmotionalIntensity = 0
+		  mConversationPhase = "opening"
+		  mLastResponseType = ""
+		  
+		  AddToHistory("Session started at " + mSessionStartTime.ToString)
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function AnalyzeRelationalContext(userInput As String) As String
+		  // Analyze relationship-specific issues
+		  Var lowerInput As String = userInput.Lowercase
+		  
+		  // Check for relationship keywords
+		  If InStr(lowerInput, "doesn't listen") > 0 Or InStr(lowerInput, "won't listen") > 0 Then
+		    Return "not_being_heard"
+		  ElseIf InStr(lowerInput, "doesn't understand") > 0 Then
+		    Return "misunderstood"
+		  ElseIf InStr(lowerInput, "doesn't care") > 0 Then
+		    Return "feeling_uncared_for"
+		  ElseIf InStr(lowerInput, "ignores") > 0 Then
+		    Return "being_ignored"
+		  ElseIf InStr(lowerInput, "fight") > 0 Or InStr(lowerInput, "argue") > 0 Then
+		    Return "conflict"
+		  ElseIf InStr(lowerInput, "lonely") > 0 Or InStr(lowerInput, "alone") > 0 Then
+		    Return "loneliness_in_relationship"
+		  End If
+		  
+		  Return ""
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateContextualResponse(userInput As String, emotion As String) As String
+		  // Create responses that actually reference what they said
+		  
+		  Var lowerInput As String = userInput.Lowercase
+		  Var response As String = ""
+		  
+		  // Check for relationship context
+		  Var relationalIssue As String = AnalyzeRelationalContext(userInput)
+		  
+		  // Extract key phrases they used
+		  Var keyPhrases() As String = ExtractKeyPhrases(userInput)
+		  
+		  // Don't repeat the same type of response twice in a row
+		  Var responseType As String = DetermineResponseType(emotion, relationalIssue)
+		  While responseType = mLastResponseType And mTurnCount > 1
+		    responseType = DetermineAlternativeResponseType(emotion)
+		  Wend
+		  mLastResponseType = responseType
+		  
+		  // Build response based on phase and context
+		  Select Case mConversationPhase
+		  Case "opening"
+		    response = CreateOpeningResponse(userInput, emotion, keyPhrases, relationalIssue)
+		    
+		  Case "exploration"
+		    response = CreateExplorationResponse(userInput, emotion, keyPhrases, relationalIssue)
+		    
+		  Case "deepening"
+		    response = CreateDeepeningResponse(userInput, emotion, keyPhrases, relationalIssue)
+		    
+		  Case "supporting"
+		    response = CreateSupportingResponse(userInput, emotion, keyPhrases, relationalIssue)
+		    
+		  End Select
+		  
+		  // Track that we used this response to avoid repetition
+		  If Not mResponsesUsed.HasKey(response) Then
+		    mResponsesUsed.Value(response) = 1
+		  End If
+		  
+		  Return response
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateDeepeningResponse(userInput As String, emotion As String, keyPhrases() As String, relationalIssue As String) As String
+		  // Deeper, more personal responses after trust is built
+		  
+		  Var response As String = ""
+		  Var lowerInput As String = userInput.Lowercase
+		  
+		  // Handle relationship-specific deepening
+		  If relationalIssue <> "" Then
+		    Select Case relationalIssue
+		    Case "not_being_heard"
+		      response = "Not being heard by someone you love... that's a particular kind of loneliness, isn't it? You're physically together but emotionally miles apart."
+		    Case "feeling_uncared_for"
+		      response = "When the person who's supposed to care most seems indifferent... that cuts deep. How long have you been feeling this disconnection?"
+		    Case "loneliness_in_relationship"
+		      response = "Being lonely while in a relationship can feel worse than being alone. You're grieving the connection you thought you had, or hoped to have."
+		    End Select
+		    Return response
+		  End If
+		  
+		  // Connect to patterns if we've identified them
+		  If mEmotionalPatterns.KeyCount > 2 Then
+		    response = "I'm noticing a pattern in what you're sharing - "
+		    If emotion = "sad" Or emotion = "hurt" Then
+		      response = response + "there's grief here, but also something else. What do you think is underneath the sadness?"
+		    ElseIf emotion = "angry" Then
+		      response = response + "your anger seems to be protecting something more vulnerable. What would happen if you let the anger go for a moment?"
+		    Else
+		      response = response + "there are layers to what you're experiencing. Which layer feels most urgent to explore?"
+		    End If
+		  Else
+		    // Offer deeper insight based on emotion
+		    response = BuildDeepInsight(emotion, mEmotionalIntensity)
+		  End If
+		  
+		  Return response
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateExplorationResponse(userInput As String, emotion As String, keyPhrases() As String, relationalIssue As String) As String
+		  // Explore what they've shared with genuine curiosity
+		  
+		  Var response As String = ""
+		  Var lowerInput As String = userInput.Lowercase
+		  
+		  // If it's a short response like "yes" or similar, dig deeper
+		  If userInput.Length < 20 Then
+		    If lowerInput = "yes" Or lowerInput = "yeah" Or lowerInput = "exactly" Then
+		      response = "Tell me more about that. What specifically makes you feel that way?"
+		    ElseIf InStr(lowerInput, "worry") > 0 Then
+		      response = "What aspect of this worry keeps coming back to you? What's the worst-case scenario you're imagining?"
+		    ElseIf InStr(lowerInput, "depressed") > 0 Then
+		      response = "Depression is exhausting. How long have you been feeling this way? What started it, do you think?"
+		    Else
+		      response = "I hear you. Can you help me understand what this means for you?"
+		    End If
+		    Return response
+		  End If
+		  
+		  // Handle relational exploration
+		  If relationalIssue = "not_being_heard" Then
+		    response = "When you try to communicate with " + GetRelationshipPerson(userInput) + ", what happens? Do they interrupt, change the subject, or just seem absent?"
+		  ElseIf keyPhrases.Ubound >= 0 Then
+		    Var phrase As String = keyPhrases(0)
+		    response = "You mentioned '" + phrase + "' - that seems really significant. What does that look like in your daily life?"
+		  Else
+		    response = CreateGenericExploration(emotion)
+		  End If
+		  
+		  Return response
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateGenericExploration(emotion As String) As String
+		  // Create non-repetitive exploration responses
+		  
+		  Select Case emotion
+		  Case "angry", "furious"
+		    Var angryOptions() As String = Array( _
+		    "What would you need to see change for this anger to ease?", _
+		    "If your anger could speak, what would it say?", _
+		    "Who or what are you most angry at?" _
+		    )
+		    Return angryOptions(System.Random.InRange(0, angryOptions.Ubound))
+		    
+		  Case "sad", "devastated"
+		    Var sadOptions() As String = Array( _
+		    "What have you lost that you're grieving?", _
+		    "Is this sadness familiar, or does it feel new?", _
+		    "What would comfort look like for you right now?" _
+		    )
+		    Return sadOptions(System.Random.InRange(0, sadOptions.Ubound))
+		    
+		  Case "scared", "terrified"
+		    Var scaredOptions() As String = Array( _
+		    "What's the worst part of this fear for you?", _
+		    "Has this fear affected your daily life? How?", _
+		    "What would you do if you weren't afraid?" _
+		    )
+		    Return scaredOptions(System.Random.InRange(0, scaredOptions.Ubound))
+		    
+		  Else
+		    Return "Help me understand what you're going through. What's the hardest part?"
+		  End Select
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateOpeningResponse(userInput As String, emotion As String, keyPhrases() As String, relationalIssue As String) As String
+		  // First few exchanges - establish connection
+		  
+		  Var response As String = ""
+		  Var lowerInput As String = userInput.Lowercase
+		  
+		  // Special handling for relationship issues in opening
+		  If relationalIssue = "not_being_heard" And InStr(lowerInput, "wife") > 0 Then
+		    response = "When you say your wife doesn't hear what you say... that must be incredibly isolating. "
+		    response = response + "Being unheard by your partner strikes at something fundamental - our need to be known and understood by the person closest to us."
+		    Return response
+		  ElseIf relationalIssue = "not_being_heard" And InStr(lowerInput, "husband") > 0 Then
+		    response = "Your husband doesn't listen - I hear how painful that is. "
+		    response = response + "When the person who's supposed to be your teammate doesn't seem to hear you, it can feel like you're living parallel lives instead of a shared one."
+		    Return response
+		  End If
+		  
+		  // For brief responses early on
+		  If userInput.Length < 30 And mTurnCount <= 3 Then
+		    If InStr(lowerInput, "worry") > 0 Then
+		      response = "A worry significant enough to bring here. What's weighing on you most about it?"
+		    ElseIf InStr(lowerInput, "depressed") > 0 Then
+		      response = "Thank you for naming that. Depression can make everything feel heavy. How are you managing day to day?"
+		    Else
+		      response = "I hear that this is important. Tell me what brought you here today."
+		    End If
+		    Return response
+		  End If
+		  
+		  // Build opening validation
+		  If emotion <> "uncertainty" Then
+		    response = "I can hear the " + emotion + " in what you're sharing. "
+		    response = response + GetEmotionValidation(emotion)
+		  Else
+		    response = "Thank you for sharing this with me. I'm here to understand."
+		  End If
+		  
+		  Return response
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateSupportingResponse(userInput As String, emotion As String, keyPhrases() As String, relationalIssue As String) As String
+		  // Later phase - offer support and perspective
+		  
+		  Var response As String = ""
+		  Var lowerInput As String = userInput.Lowercase
+		  
+		  // For very brief inputs in supporting phase
+		  If userInput.Length < 30 Then
+		    If InStr(lowerInput, "what can i do") > 0 Or InStr(lowerInput, "what should i do") > 0 Then
+		      response = "The fact that you're asking that question shows you haven't given up. "
+		      response = response + "What's one small step that feels possible, even if it doesn't solve everything?"
+		    ElseIf lowerInput = "nothing" Or lowerInput = "i don't know" Then
+		      response = "Sometimes 'I don't know' is the most honest answer. It's okay to not have solutions right now. What would just surviving today look like?"
+		    Else
+		      response = "You're still here, still trying to make sense of this. That takes courage."
+		    End If
+		    Return response
+		  End If
+		  
+		  // Synthesize for relationship issues
+		  If mKeyTopics.HasKey("my wife") Or mKeyTopics.HasKey("my husband") Then
+		    response = "Relationship struggles can be the loneliest battles we fight. "
+		    If relationalIssue = "not_being_heard" Then
+		      response = response + "Have you been able to tell your partner how their not listening affects you? Sometimes they don't realize the impact."
+		    Else
+		      response = response + "What do you think you need most from your relationship right now?"
+		    End If
+		  Else
+		    response = OfferContextualSupport(emotion, mEmotionalIntensity)
+		  End If
+		  
+		  Return response
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function DetermineAlternativeResponseType(emotion As String) As String
+		  // Get an alternative response type to avoid repetition
+		  Var types() As String = Array("exploration", "validation", "reflection", "question", "support")
+		  Return types(System.Random.InRange(0, types.Ubound))
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function DetermineConversationPhase() As String
+		  // Determine which phase of conversation we're in
+		  
+		  If mTurnCount <= 2 Then
+		    Return "opening"
+		  ElseIf mTurnCount <= 5 Then
+		    Return "exploration"
+		  ElseIf mTurnCount <= 10 Then
+		    Return "deepening"
+		  Else
+		    Return "supporting"
+		  End If
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function DetermineResponseType(emotion As String, relationalIssue As String) As String
+		  // Determine what type of response to give
+		  
+		  If relationalIssue <> "" Then
+		    // Relationship issues need specific handling
+		    If mTurnCount <= 2 Then
+		      Return "validation"
+		    Else
+		      Return "exploration"
+		    End If
+		  End If
+		  
+		  // Vary based on emotion and turn
+		  If emotion = "uncertainty" Then
+		    Return "exploration"
+		  ElseIf mEmotionalIntensity > 7 Then
+		    Return "validation"
+		  ElseIf mTurnCount Mod 3 = 0 Then
+		    Return "reflection"
+		  Else
+		    Return "exploration"
+		  End If
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function DetectEmotion(input As String) As String
+		  // Enhanced emotion detection with nuance
+		  
+		  Var lowerInput As String = input.Lowercase
+		  
+		  // Look for emotion combinations
+		  Var primaryEmotion As String = "uncertainty"
+		  Var highestIntensity As Integer = 3
+		  
+		  // Check for various emotional indicators
+		  If InStr(lowerInput, "furious") > 0 Or InStr(lowerInput, "rage") > 0 Or InStr(lowerInput, "livid") > 0 Then
+		    primaryEmotion = "furious"
+		    highestIntensity = 9
+		  ElseIf InStr(lowerInput, "devastated") > 0 Or InStr(lowerInput, "crushed") > 0 Or InStr(lowerInput, "broken") > 0 Then
+		    primaryEmotion = "devastated"
+		    highestIntensity = 9
+		  ElseIf InStr(lowerInput, "depressed") > 0 Then
+		    primaryEmotion = "depressed"
+		    highestIntensity = 8
+		  ElseIf InStr(lowerInput, "angry") > 0 Or InStr(lowerInput, "mad") > 0 Or InStr(lowerInput, "pissed") > 0 Or InStr(lowerInput, "frustrated") > 0 Then
+		    primaryEmotion = "angry"
+		    highestIntensity = 7
+		  ElseIf InStr(lowerInput, "sad") > 0 Or InStr(lowerInput, "down") > 0 Or InStr(lowerInput, "cry") > 0 Then
+		    primaryEmotion = "sad"
+		    highestIntensity = 6
+		  ElseIf InStr(lowerInput, "scared") > 0 Or InStr(lowerInput, "afraid") > 0 Or InStr(lowerInput, "worried") > 0 Or InStr(lowerInput, "anxious") > 0 Then
+		    primaryEmotion = "scared"
+		    highestIntensity = 6
+		  ElseIf InStr(lowerInput, "worry") > 0 Then
+		    primaryEmotion = "worried"
+		    highestIntensity = 5
+		  ElseIf InStr(lowerInput, "hurt") > 0 Or InStr(lowerInput, "pain") > 0 Then
+		    primaryEmotion = "hurt"
+		    highestIntensity = 7
+		  ElseIf InStr(lowerInput, "lost") > 0 Or InStr(lowerInput, "confused") > 0 Or InStr(lowerInput, "don't know") > 0 Then
+		    primaryEmotion = "confused"
+		    highestIntensity = 5
+		  ElseIf InStr(lowerInput, "tired") > 0 Or InStr(lowerInput, "exhausted") > 0 Or InStr(lowerInput, "can't take") > 0 Then
+		    primaryEmotion = "exhausted"
+		    highestIntensity = 7
+		  ElseIf InStr(lowerInput, "alone") > 0 Or InStr(lowerInput, "lonely") > 0 Then
+		    primaryEmotion = "lonely"
+		    highestIntensity = 6
+		  End If
+		  
+		  // Check context for emotional intensity
+		  If InStr(lowerInput, "doesn't listen") > 0 Or InStr(lowerInput, "won't listen") > 0 Then
+		    If primaryEmotion = "uncertainty" Then
+		      primaryEmotion = "hurt"
+		    End If
+		    highestIntensity = Max(highestIntensity, 6)
+		  End If
+		  
+		  mEmotionalIntensity = highestIntensity
+		  Return primaryEmotion
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function ExtractKeyPhrases(input As String) As String()
+		  // Extract meaningful phrases from user input
+		  
+		  Var phrases() As String
+		  Var words() As String = input.Split(" ")
+		  
+		  // Look for relationship references
+		  For i As Integer = 0 To words.Ubound
+		    If i < words.Ubound Then
+		      Var twoWord As String = words(i) + " " + words(i + 1)
+		      
+		      // Important two-word phrases
+		      If InStr("my wife,my husband,my partner,my mother,my father,my child,my friend,my boss,my job", twoWord.Lowercase) > 0 Then
+		        phrases.Append(twoWord)
+		        mKeyTopics.Value(twoWord.Lowercase) = True
+		      End If
+		    End If
+		    
+		    // Capture emotional phrases
+		    If i < words.Ubound - 1 Then
+		      Var threeWord As String = words(i) + " " + words(i + 1) + " " + words(i + 2)
+		      
+		      If InStr(threeWord.Lowercase, "doesn't") > 0 Or InStr(threeWord.Lowercase, "won't") > 0 Or _
+		        InStr(threeWord.Lowercase, "can't") > 0 Or InStr(threeWord.Lowercase, "never") > 0 Then
+		        phrases.Append(threeWord)
+		        If mUserSharedDetails.KeyCount < 10 Then // Limit stored details
+		          mUserSharedDetails.Value("detail_" + Str(mUserSharedDetails.KeyCount)) = threeWord
+		        End If
+		      End If
+		    End If
+		  Next
+		  
+		  Return phrases
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function GenerateResponse(userInput As String) As String
+		  AddToHistory("User: " + userInput)
+		  mTurnCount = mTurnCount + 1
+		  
+		  // Check for boundaries first
+		  Var boundaryResponse As String = ValidateUserBoundary(userInput)
+		  If boundaryResponse <> "" Then
+		    AddToHistory("Bot: " + boundaryResponse)
+		    Return boundaryResponse
+		  End If
+		  
+		  // Update conversation phase
+		  mConversationPhase = DetermineConversationPhase()
+		  
+		  // Detect emotion
+		  Var currentEmotion As String = DetectEmotion(userInput)
+		  
+		  // Track emotional patterns
+		  If Not mEmotionalPatterns.HasKey(currentEmotion) Then
+		    mEmotionalPatterns.Value(currentEmotion) = 1
+		  Else
+		    mEmotionalPatterns.Value(currentEmotion) = mEmotionalPatterns.Value(currentEmotion) + 1
+		  End If
+		  
+		  mLastEmotion = currentEmotion
+		  
+		  // Generate contextual response
+		  Var response As String = CreateContextualResponse(userInput, currentEmotion)
+		  
+		  // Add natural variation only sometimes
+		  If System.Random.InRange(1, 100) <= 30 Then
+		    response = AddNaturalVariation(response)
+		  End If
+		  
+		  mLastResponse = response
+		  AddToHistory("Bot: " + response)
+		  
+		  Return response
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function AddNaturalVariation(response As String) As String
+		  // Add natural speech patterns
+		  
+		  Var varied As String = response
+		  
+		  // Only add variations sometimes, not always
+		  If System.Random.InRange(1, 100) <= 20 Then
+		    Var pauses() As String = Array("... ", "I... ", "Hmm. ")
+		    varied = pauses(System.Random.InRange(0, pauses.Ubound)) + varied
+		  End If
+		  
+		  Return varied
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function BuildDeepInsight(emotion As String, intensity As Integer) As String
+		  // Build genuinely insightful reflections
+		  
+		  If intensity > 7 Then
+		    Select Case emotion
+		    Case "angry", "furious"
+		      Return "This level of anger often comes from feeling powerless in a situation where you should have control. What power has been taken from you?"
+		    Case "sad", "devastated", "depressed"
+		      Return "This kind of deep sadness... it's often about more than just the current situation. It touches something older, doesn't it?"
+		    Case "scared", "terrified"
+		      Return "Fear this intense usually means something essential feels threatened. What part of yourself are you trying to protect?"
+		    Case "exhausted"
+		      Return "You've been holding it together for so long, but at what cost? When did you last feel truly rested?"
+		    Else
+		      Return "The intensity of what you're feeling tells me this goes deep. This isn't just about what happened - it's about what it means to you."
+		    End Select
+		  Else
+		    Select Case emotion
+		    Case "worried"
+		      Return "Worry has a way of stealing our present moment while we imagine future catastrophes. What's the story your mind is telling you?"
+		    Case "confused"
+		      Return "Sometimes confusion protects us from a truth we're not ready to face. What becomes clear if you sit with this confusion?"
+		    Else
+		      Return "There's meaning in what you're experiencing. What is this emotion trying to tell you?"
+		    End Select
+		  End If
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function GetEmotionValidation(emotion As String) As String
+		  // Get validation specific to the emotion
+		  
+		  Select Case emotion
+		  Case "angry", "furious"
+		    Return "Anger like this doesn't come from nowhere - something important to you has been violated or threatened."
+		  Case "sad", "devastated"
+		    Return "This sadness is real and it matters. You're grieving something significant."
+		  Case "depressed"
+		    Return "Depression isn't just sadness - it's like all the color has drained from the world. That's an exhausting way to live."
+		  Case "scared", "terrified"
+		    Return "Fear is your mind's way of trying to keep you safe, even when it feels overwhelming."
+		  Case "worried"
+		    Return "Worry shows you care deeply about the outcome. The challenge is it rarely changes what will happen."
+		  Case "confused", "lost"
+		    Return "Not knowing which way to turn is disorienting. It's okay to not have all the answers right now."
+		  Case "hurt"
+		    Return "That hurt cuts deep. When someone we count on lets us down, it shakes our foundation."
+		  Case "exhausted"
+		    Return "You've been running on empty, trying to keep all the plates spinning. No wonder you're exhausted."
+		  Case "lonely"
+		    Return "Loneliness is one of the most painful human experiences. We're wired for connection, and without it, we suffer."
+		  Else
+		    Return "What you're feeling is valid and important."
+		  End Select
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function GetRelationshipPerson(input As String) As String
+		  // Extract who they're talking about
+		  Var lowerInput As String = input.Lowercase
+		  
+		  If InStr(lowerInput, "wife") > 0 Then Return "your wife"
+		  If InStr(lowerInput, "husband") > 0 Then Return "your husband"
+		  If InStr(lowerInput, "partner") > 0 Then Return "your partner"
+		  If InStr(lowerInput, "mother") > 0 Or InStr(lowerInput, "mom") > 0 Then Return "your mother"
+		  If InStr(lowerInput, "father") > 0 Or InStr(lowerInput, "dad") > 0 Then Return "your father"
+		  If InStr(lowerInput, "friend") > 0 Then Return "your friend"
+		  If InStr(lowerInput, "boss") > 0 Then Return "your boss"
+		  
+		  Return "them"
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function OfferContextualSupport(emotion As String, intensity As Integer) As String
+		  // Offer appropriate support based on context
+		  
+		  If intensity > 7 Then
+		    Return "You've been carrying this for a long time, haven't you? What would it mean to set down even a small part of this burden?"
+		  ElseIf emotion = "depressed" Then
+		    Return "Depression tells us we're alone and nothing will change. But you reached out today - that's not nothing. What tiny step forward feels possible?"
+		  ElseIf emotion = "confused" Then
+		    Return "When we can't see the whole path, we just need to see the next step. What feels like the next right thing, even if it's small?"
+		  Else
+		    Return "You're navigating something really difficult. What kind of support would feel most helpful right now?"
+		  End If
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function GetConversationHistory() As String()
+		  Return mConversationHistory
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function GetEmotionalProfile() As String
+		  If mEmotionalPatterns.KeyCount = 0 Then Return "No emotional patterns identified yet."
+		  
+		  Var profile As String = "Emotional patterns detected:" + EndOfLine
+		  For Each emotion As String In mEmotionalPatterns.Keys
+		    Var count As Integer = mEmotionalPatterns.Value(emotion)
+		    profile = profile + "- " + emotion + " (detected " + Str(count) + " times)" + EndOfLine
+		  Next
+		  
+		  profile = profile + EndOfLine + "Current emotional intensity: " + Str(mEmotionalIntensity) + "/10" + EndOfLine
+		  profile = profile + "Most recent emotion: " + mLastEmotion + EndOfLine
+		  profile = profile + "Conversation phase: " + mConversationPhase + EndOfLine
+		  
+		  If mKeyTopics.KeyCount > 0 Then
+		    profile = profile + EndOfLine + "Key topics discussed:" + EndOfLine
+		    For Each topic As String In mKeyTopics.Keys
+		      profile = profile + "- " + topic + EndOfLine
+		    Next
+		  End If
+		  
+		  Return profile
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function GetSessionSummary() As String
+		  Var summary As String = "Session Summary:" + EndOfLine
+		  summary = summary + "Started: " + mSessionStartTime.ToString + EndOfLine
+		  summary = summary + "Duration: " + Str((DateTime.Now.SecondsFrom1970 - mSessionStartTime.SecondsFrom1970) / 60) + " minutes" + EndOfLine
+		  summary = summary + "Exchanges: " + Str(mTurnCount) + EndOfLine
+		  summary = summary + "Peak emotional intensity: " + Str(mEmotionalIntensity) + "/10" + EndOfLine
+		  summary = summary + "Current phase: " + mConversationPhase + EndOfLine
+		  
+		  If mKeyTopics.KeyCount > 0 Then
+		    summary = summary + "Topics discussed: " + Str(mKeyTopics.KeyCount) + EndOfLine
+		  End If
+		  
+		  Return summary
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function GetUserName() As String
+		  Return mUserName
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub ResizeTerminal(cols As Integer, rows As Integer)
+		  // Use ANSI escape sequence to resize terminal window
+		  stdout.Write(Chr(27) + "[8;" + Str(rows) + ";" + Str(cols) + "t")
+		  stdout.Flush
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub SetScreenColours()
+		  Var kLightBlue As String = Chr(27) + "[104m"  // Bright blue background
+		  Var kCyan As String = Chr(27) + "[106m"       // Cyan background (light blue-ish)
+		  Var kClearScreen As String = Chr(27) + "[2J"  // Clear screen
+		  Var kHomeCursor As String = Chr(27) + "[H"    // Move cursor to home (0,0)
+		  Var kWhiteText As String = Chr(27) + "[97m"   // Bright white text
+		  
+		  // Set up the entire screen with light blue background
+		  stdout.Write(kLightBlue + kClearScreen + kHomeCursor + kWhiteText)
+		  stdout.Flush
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub SetUserName(name As String)
+		  mUserName = name
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function ValidateUserBoundary(input As String) As String
+		  Var lowerInput As String = input.Lowercase
+		  
+		  // Respect clear boundaries
+		  If InStr(lowerInput, "stop") > 0 And (InStr(lowerInput, "talking") > 0 Or InStr(lowerInput, "asking") > 0) Then
+		    Return "I understand. I'll give you space. I'm here if you need me."
+		  ElseIf InStr(lowerInput, "don't want to talk") > 0 Then
+		    Return "That's completely okay. You don't have to talk about anything you're not ready to share. What would feel right for you?"
+		  ElseIf InStr(lowerInput, "leave me alone") > 0 Then
+		    Return "I hear you. Take all the time you need. I'll be here if you want to return."
+		  ElseIf lowerInput = "stop" Or lowerInput = "enough" Then
+		    Return "Okay. I'm here when you're ready."
+		  End If
+		  
+		  Return ""
+		End Function
+	#tag EndMethod
+
+
+	#tag ViewBehavior
+		#tag ViewProperty
+			Name="Name"
+			Visible=true
+			Group="ID"
+			InitialValue=""
+			Type="String"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Index"
+			Visible=true
+			Group="ID"
+			InitialValue="-2147483648"
+			Type="Integer"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Super"
+			Visible=true
+			Group="ID"
+			InitialValue=""
+			Type="String"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Left"
+			Visible=true
+			Group="Position"
+			InitialValue="0"
+			Type="Integer"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="Top"
+			Visible=true
+			Group="Position"
+			InitialValue="0"
+			Type="Integer"
+			EditorType=""
+		#tag EndViewProperty
+	#tag EndViewBehavior
+End Class
+#tag EndClass

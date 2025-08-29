@@ -35,23 +35,35 @@ None
 
 - **`mConversationHistory`** Private String()
 
-- **`mEmotionalIntensity`** Private Integer
+- **`mRecentExchanges`** Private String()
 
 - **`mEmotionalPatterns`** Private Dictionary
 
-- **`mLabelingCount`** Private Integer
+- **`mKeyTopics`** Private Dictionary
+
+- **`mSpecificSituations`** Private Dictionary
+
+- **`mRecentResponses`** Private Dictionary
+
+- **`mUserSharedDetails`** Private Dictionary
+
+- **`mSessionStartTime`** Private DateTime
+
+- **`mTurnCount`** Private Integer
 
 - **`mLastEmotion`** Private String
 
+- **`mEmotionalIntensity`** Private Integer
+
+- **`mConversationPhase`** Private String
+
+- **`mLastResponseType`** Private String
+
 - **`mLastResponse`** Private String
 
-- **`mMirroredPhrases`** Private Dictionary
+- **`mCurrentSituation`** Private String
 
-- **`mQuestionCount`** Private Integer
-
-- **`mReflectionCount`** Private Integer
-
-- **`mSessionStartTime`** Private DateTime
+- **`mLastUserInput`** Private String
 
 - **`mUserName`** Private String
 
@@ -67,44 +79,72 @@ None
 - **`Constructor`** Public Constructor
   - **Signature:** `Public Constructor()`
 
-- **`CreateCalibrationQuestion`** Private Function
+- **`GenerateResponse`** Public Function
   - **Parameters:** `userInput As String`
   - **Returns:** `String`
-  - **Signature:** `Private Function CreateCalibrationQuestion(userInput As String) As String`
+  - **Signature:** `Public Function GenerateResponse(userInput As String) As String`
 
-- **`CreateEmotionalLabel`** Private Function
-  - **Parameters:** `emotion As String, intensity As Integer`
+- **`CreateSmartResponse`** Private Function
+  - **Parameters:** `userInput As String, emotion As String, specificSituation As String`
   - **Returns:** `String`
-  - **Signature:** `Private Function CreateEmotionalLabel(emotion As String, intensity As Integer) As String`
+  - **Signature:** `Private Function CreateSmartResponse(userInput As String, emotion As String, specificSituation As String) As String`
 
-- **`CreateIllusionOfControl`** Private Function
+- **`GetContextualValidation`** Private Function
+  - **Parameters:** `emotion As String, situation As String`
+  - **Returns:** `String`
+  - **Signature:** `Private Function GetContextualValidation(emotion As String, situation As String) As String`
+
+- **`GetOpeningQuestion`** Private Function
+  - **Parameters:** `situation As String`
+  - **Returns:** `String`
+  - **Signature:** `Private Function GetOpeningQuestion(situation As String) As String`
+
+- **`GetExplorationResponse`** Private Function
+  - **Parameters:** `userInput As String, emotion As String, situation As String`
+  - **Returns:** `String`
+  - **Signature:** `Private Function GetExplorationResponse(userInput As String, emotion As String, situation As String) As String`
+
+- **`GetDeepeningResponse`** Private Function
+  - **Parameters:** `userInput As String, emotion As String, situation As String`
+  - **Returns:** `String`
+  - **Signature:** `Private Function GetDeepeningResponse(userInput As String, emotion As String, situation As String) As String`
+
+- **`GetSupportingResponse`** Private Function
+  - **Parameters:** `userInput As String, emotion As String, situation As String`
+  - **Returns:** `String`
+  - **Signature:** `Private Function GetSupportingResponse(userInput As String, emotion As String, situation As String) As String`
+
+- **`EnsureUniqueResponse`** Private Function
+  - **Parameters:** `proposedResponse As String, userInput As String`
+  - **Returns:** `String`
+  - **Signature:** `Private Function EnsureUniqueResponse(proposedResponse As String, userInput As String) As String`
+
+- **`TrackResponse`** Private Sub
+  - **Parameters:** `response As String`
+  - **Signature:** `Private Sub TrackResponse(response As String)`
+
+- **`AnalyzeSpecificSituation`** Private Function
   - **Parameters:** `userInput As String`
   - **Returns:** `String`
-  - **Signature:** `Private Function CreateIllusionOfControl(userInput As String) As String`
-
-- **`CreateMirror`** Private Function
-  - **Parameters:** `userInput As String`
-  - **Returns:** `String`
-  - **Signature:** `Private Function CreateMirror(userInput As String) As String`
-
-- **`CreateTacticalEmpathy`** Private Function
-  - **Parameters:** `userInput As String, emotion As String`
-  - **Returns:** `String`
-  - **Signature:** `Private Function CreateTacticalEmpathy(userInput As String, emotion As String) As String`
+  - **Signature:** `Private Function AnalyzeSpecificSituation(userInput As String) As String`
 
 - **`DetectEmotion`** Private Function
   - **Parameters:** `input As String`
   - **Returns:** `String`
   - **Signature:** `Private Function DetectEmotion(input As String) As String`
 
-- **`DetermineResponseType`** Private Function
-  - **Returns:** `String`
-  - **Signature:** `Private Function DetermineResponseType() As String`
+- **`TrackEmotionalPattern`** Private Sub
+  - **Parameters:** `emotion As String`
+  - **Signature:** `Private Sub TrackEmotionalPattern(emotion As String)`
 
-- **`GenerateResponse`** Public Function
-  - **Parameters:** `userInput As String`
+- **`DetermineConversationPhase`** Private Function
   - **Returns:** `String`
-  - **Signature:** `Public Function GenerateResponse(userInput As String) As String`
+  - **Signature:** `Private Function DetermineConversationPhase() As String`
+
+- **`ValidateUserBoundary`** Public Function
+  - **Parameters:** `input As String`
+  - **Returns:** `String`
+  - **Signature:** `Public Function ValidateUserBoundary(input As String) As String`
 
 - **`GetConversationHistory`** Public Function
   - **Returns:** `String()`
@@ -126,17 +166,12 @@ None
   - **Parameters:** `cols As Integer, rows As Integer`
   - **Signature:** `Public Sub ResizeTerminal(cols As Integer, rows As Integer)`
 
-- **`setScreenColours`** Public Sub
-  - **Signature:** `Public Sub setScreenColours()`
+- **`SetScreenColours`** Public Sub
+  - **Signature:** `Public Sub SetScreenColours()`
 
 - **`SetUserName`** Public Sub
   - **Parameters:** `name As String`
   - **Signature:** `Public Sub SetUserName(name As String)`
-
-- **`ValidateUserBoundary`** Public Function
-  - **Parameters:** `input As String`
-  - **Returns:** `String`
-  - **Signature:** `Public Function ValidateUserBoundary(input As String) As String`
 
 #### Events
 
@@ -167,28 +202,8 @@ None
 
 ## License
 
-MIT License
-
-Copyright (c) 2025 Philip Cumpston
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
+[Specify your license here]
 
 ---
-*This README was automatically generated from the Xojo project file on 23/8/2025, using an application written by Philip Cumpston*
+*This README was automatically generated from the Xojo project file on 29/8/2025*
+*© Philip Cumpston 28th August 2025 *
